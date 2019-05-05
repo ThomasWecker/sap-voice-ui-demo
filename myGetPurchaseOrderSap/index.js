@@ -2,6 +2,7 @@
 
 /**
  * This is a demo showcasing a simple sap conversational ui build with the Amazon Alexa Skills Kit.
+ * by Thomas Wecker
  */
 
 
