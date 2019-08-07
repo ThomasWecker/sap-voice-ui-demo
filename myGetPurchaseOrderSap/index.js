@@ -2,7 +2,6 @@
 
 /**
  * This is a demo showcasing a simple sap conversational ui build with the Amazon Alexa Skills Kit.
- * by Thomas Wecker
  */
 
 
@@ -65,7 +64,7 @@ function handleSessionEndRequest(callback) {
     callback({}, buildSpeechletResponse(cardTitle, speechOutput, null, shouldEndSession));
 }
 
-function setDeliveryIntentSesion(intent, session, callback) {
+function setDeliveryIntentSession(intent, session, callback) {
     let sessionAttributes = {};
     const cardTitle = intent.name;
     let speechOutput = '';
@@ -85,7 +84,7 @@ function setDeliveryIntentSesion(intent, session, callback) {
 
         var http = require('http');
 
-        const hostname = "http://35.189.196.22:8000/";
+        const hostname = "http://35.187.190.102:8000/";
         var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
         var entitySet = "ZCC_GetPurchaseOrderData";
         var filter = "/?$filter=PurchaseOrder eq '";
@@ -108,19 +107,194 @@ function setDeliveryIntentSesion(intent, session, callback) {
                 var myData = parsedData.d.results;
 
                 var myDeliveryDate;
+                var mySupplierName;
 
                 myData.forEach(function(myData){
+                    mySupplierName = (myData.SupplierName);
                     var jsonDate = (myData.DeliveryDate);
                     function parseJsonDate(jsonDateString){
                         return new Date(parseInt(jsonDateString.replace('/Date(', '')));
                     }
-                    myDeliveryDate = parseJsonDate(jsonDate);
+                    var parsedDate = parseJsonDate(jsonDate);
+                    var month = parsedDate.getMonth() + 1;
+                    var day = parsedDate.getDate();
+                    var year = parsedDate.getFullYear();
+
+                    myDeliveryDate = day + "/" + month + "/" + year;
                 });
 
                 console.log(myDeliveryDate);
 
-                speechOutput = `Here are your informations for Purchase Order ${myPurchaseOrder}.` +
-                    `This Purchase Order will get delivered on ${myDeliveryDate}.`;
+                speechOutput = `'Purchase Order ${myPurchaseOrder} is due for delivery on ${myDeliveryDate}. Considering the lead time for ${mySupplierName} the Purchase Order should get submitted latest tomorrow. '`;
+                callback(sessionAttributes,
+                    buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+
+            });
+
+        });
+
+
+    } else {
+        speechOutput = "Sorry I'm not speaking bavarian. Please try again.";
+        repromptText = null;
+        callback(sessionAttributes,
+            buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+    }
+}
+
+function setStatusIntentSession(intent, session, callback) {
+    let sessionAttributes = {};
+    const cardTitle = intent.name;
+    let speechOutput = '';
+    let repromptText = '';
+    const shouldEndSession = false;
+
+    // Get the Utterance variables
+    const mySupplierNameSlot = intent.slots.SupplierName;
+    console.log("==> Called Intent:" + cardTitle + "Slot:" + mySupplierNameSlot);
+
+    if (mySupplierNameSlot) {
+
+        const mySupplierName = mySupplierNameSlot.value;
+
+        speechOutput = `Here are the open Purchase Orders for ${mySupplierName}`;
+        repromptText = null;
+
+        var http = require('http');
+
+        const hostname = "http://35.187.190.102:8000/";
+        var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
+        var entitySet = "ZCC_GetPurchaseOrderData";
+        var filter1 = "/?$filter=(SupplierName eq '";
+        var filter2 = "') and (OverallStatus eq 'P')";
+        var format = "&$format=json"; //
+        var uri = hostname + path + entitySet + filter1 + mySupplierName + filter2 + format;
+
+        console.log("Get data from: " + uri);
+
+        http.get(uri, function(response) {
+            console.log(uri);
+            console.log('GET status: ' + response.statusCode);
+
+            var rawData = '';
+
+            response.on('data', function(chunck) {
+                console.log('BODY: ' + chunck);
+                console.log(chunck);
+                rawData += chunck;
+                var parsedData = JSON.parse(rawData);
+                var myData = parsedData.d.results;
+
+                //count
+                var myResult = Object.keys(myData).length;
+                console.log(myResult);
+
+                var myStatus;
+                var myPurchaseOrder = [ ];
+
+                myData.forEach(function(myData){
+                    console.log(myData.PurchaseOrder);
+                    myPurchaseOrder.push(myData.PurchaseOrder);
+                    var jsonOverallStatus = (myData.OverallStatus);
+
+                    if (jsonOverallStatus === 'A') {
+                        myStatus = 'Approved';
+                    } else if (jsonOverallStatus === 'P') {
+                        myStatus = 'Awaiting Approval';
+                    } else if (jsonOverallStatus === 'R') {
+                        myStatus = 'Rejected by Approver';
+                    } else if (jsonOverallStatus === 'S') {
+                        myStatus = 'Sent';
+                    } else if (jsonOverallStatus === 'F') {
+                        myStatus = 'Confirmed';
+                    } else if (jsonOverallStatus === 'D') {
+                        myStatus = 'Delivered';
+                    } else if (jsonOverallStatus === 'I') {
+                        myStatus = 'Invoiced';
+                    } else if (jsonOverallStatus === 'X') {
+                        myStatus = 'Canceled';
+                    } else if (jsonOverallStatus === 'J') {
+                        myStatus = 'Rejected by Supplier';
+                    } else if (jsonOverallStatus === 'C') {
+                        myStatus = 'Completed';
+                    } else {
+                        myStatus = 'No status information available';
+                    }
+
+                });
+
+                console.log(myStatus);
+
+                speechOutput = `You have ${myResult} open Purchase Order from ${mySupplierName}. Purchase Order Number ${myPurchaseOrder}. '`;
+                callback(sessionAttributes,
+                    buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+
+            });
+
+        });
+
+    } else {
+        speechOutput = "Sorry I'm not speaking bavarian. Please try again.";
+        repromptText = null;
+        callback(sessionAttributes,
+            buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+    }
+}
+
+function setContentIntentSession(intent, session, callback) {
+    let sessionAttributes = {};
+    const cardTitle = intent.name;
+    let speechOutput = '';
+    let repromptText = '';
+    const shouldEndSession = false;
+
+    // Get the Utterance variables
+    const myPurchaseOrderSlot = intent.slots.PurchaseOrder;
+    console.log("==> Called Intent:" + cardTitle + "Slot:" + myPurchaseOrderSlot);
+
+    if (myPurchaseOrderSlot) {
+
+        const myPurchaseOrder = myPurchaseOrderSlot.value;
+
+        speechOutput = `Here are your informations for Purchase Order ${myPurchaseOrder}.`;
+        repromptText = null;
+
+        var http = require('http');
+
+        const hostname = "http://35.187.190.102:8000/";
+        var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
+        var entitySet = "ZCC_GetPurchaseOrderData";
+        var filter = "/?$filter=PurchaseOrder eq '";
+        var format = "'&$format=json"; //
+        var uri = hostname + path + entitySet + filter + myPurchaseOrder + format;
+
+        console.log("Get data from: " + uri);
+
+        http.get(uri, function(response) {
+            console.log(uri);
+            console.log('GET status: ' + response.statusCode);
+
+            var rawData = '';
+
+            response.on('data', function(chunck) {
+                console.log('BODY: ' + chunck);
+                console.log(chunck);
+                rawData += chunck;
+                var parsedData = JSON.parse(rawData);
+                var myData = parsedData.d.results;
+
+                var myProductDescription;
+                var myQuantity;
+
+                myData.forEach(function(myData){
+                    myProductDescription = (myData.ProductDescription);
+                    var Quantity = (myData.Quantity);
+                    myQuantity = Quantity.substr(0, Quantity.length-4);
+                });
+
+                console.log(myProductDescription, myQuantity);
+
+                speechOutput = `You will receive ${myQuantity} pieces of ${myProductDescription} with Purchase Order ${myPurchaseOrder}. '`;
                 callback(sessionAttributes,
                     buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
 
@@ -168,7 +342,11 @@ function onIntent(intentRequest, session, callback) {
 
     // Dispatch to your skill's intent handlers
     if (intentName === 'DeliveryIntent') {
-        setDeliveryIntentSesion(intent, session, callback);
+        setDeliveryIntentSession(intent, session, callback);
+    } else if (intentName === 'StatusIntent') {
+        setStatusIntentSession(intent, session, callback);
+    } else if (intentName === 'ContentIntent') {
+        setContentIntentSession(intent, session, callback);
     } else if (intentName === 'AMAZON.HelpIntent') {
         getWelcomeResponse(callback);
     } else if (intentName === 'AMAZON.StopIntent' || intentName === 'AMAZON.CancelIntent') {
