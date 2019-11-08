@@ -84,7 +84,7 @@ function setDeliveryIntentSession(intent, session, callback) {
 
         var http = require('http');
 
-        const hostname = "http://35.187.190.102:8000/";
+        const hostname = "http://xx.xxx.xxx.xxx:8000/";
         var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
         var entitySet = "ZCC_GetPurchaseOrderData";
         var filter = "/?$filter=PurchaseOrder eq '";
@@ -162,7 +162,7 @@ function setStatusIntentSession(intent, session, callback) {
 
         var http = require('http');
 
-        const hostname = "http://35.187.190.102:8000/";
+        const hostname = "http://xx.xxx.xxx.xxx:8000/";
         var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
         var entitySet = "ZCC_GetPurchaseOrderData";
         var filter1 = "/?$filter=(SupplierName eq '";
@@ -261,7 +261,7 @@ function setContentIntentSession(intent, session, callback) {
 
         var http = require('http');
 
-        const hostname = "http://35.187.190.102:8000/";
+        const hostname = "http://xx.xxx.xxx.xxx:8000/";
         var path = "sap/opu/odata/sap/ZCC_GETPURCHASEORDERDATA_CDS/";
         var entitySet = "ZCC_GetPurchaseOrderData";
         var filter = "/?$filter=PurchaseOrder eq '";
